@@ -9,20 +9,30 @@ import pytorch_lightning as pl
 from torch.nn import functional as F
 from peakdetect.utils.loss import compute_loss
 from peakdetect.models import load_model
-from peakdetect.utils.parse_config import parse_data_config
 from peakdetect.utils.utils import load_classes, ap_per_class, get_batch_statistics, non_max_suppression, to_cpu, xywh2xyxy, print_environment_info, rescale_boxes
 
 class EDPeakDector(pl.LightningModule):
-    def __init__(self, args):
+    def __init__(self, 
+                 input_dp_size,
+                 class_names_path,
+                 model_config_path,
+                 conf_thres,
+                 iou_thres,
+                 nms_thres,):
         super().__init__()
         self.save_hyperparameters()
-        self.args = args
-        self.data_config = parse_data_config(self.args['data'])
-        self.class_names = load_classes(self.data_config['class_names'])
-        self.model = load_model(self.args['model'])
-
+        self.input_dp_size = input_dp_size
+        self.class_names = load_classes(class_names_path)
+        self.model = load_model(model_config_path)
+        self.conf_thres = conf_thres
+        self.iou_thres = iou_thres
+        self.nms_thres = nms_thres
+        
     def forward(self, x):
         return self.model(x)
+
+    def on_train_start(self):
+        self.logger.log_hyperparams(self.hparams, {"hp/precision": 0, "hp/recall": 0, "hp/f1":0})
 
     def training_step(self, train_batch, batch_idx):
         imgs, targets, _, _ = train_batch
@@ -38,13 +48,15 @@ class EDPeakDector(pl.LightningModule):
             'Object_loss': float(loss_components[1]),
             'Class_loss': float(loss_components[2]),
         }
-        self.log_dict(metrics, prog_bar=True, on_step=True)
+        self.log('IoU_loss', metrics['IoU_loss'], prog_bar=True, on_step=True)
+        self.log('Object_loss', metrics['Object_loss'], prog_bar=True, on_step=True)
+        self.log('Class_loss', metrics['Class_loss'], prog_bar=True, on_step=True)
 
         return metrics
 
     def training_epoch_end(self, training_step_outputs):
         if(self.current_epoch==1):
-            sample_img=torch.rand((1,1,self.data_config['pattern_size'],self.data_config['pattern_size']))
+            sample_img=torch.rand((1,1,self.input_dp_size,self.input_dp_size))
             self.logger.experiment.add_graph(self.model(),sample_img)
 
         avg_loss = torch.stack([x['loss'] for x in training_step_outputs]).mean()
@@ -68,9 +80,9 @@ class EDPeakDector(pl.LightningModule):
         targets[:, 2:] *= imgs.size(3)
 
         outputs = self.model(imgs)
-        outputs = non_max_suppression(outputs, conf_thres=self.args['conf_thres'], iou_thres=self.args['iou_thres'])
+        outputs = non_max_suppression(outputs, conf_thres=self.conf_thres, iou_thres=self.iou_thres)
 
-        sample_metrics = get_batch_statistics(outputs, targets, iou_threshold=self.args['iou_thres'])
+        sample_metrics = get_batch_statistics(outputs, targets, iou_threshold=self.iou_thres)
 
         return {'imgs':imgs,
                 'targets':targets,
@@ -95,6 +107,10 @@ class EDPeakDector(pl.LightningModule):
         self.logger.experiment.add_scalar('precision', precision.mean(), self.current_epoch)
         self.logger.experiment.add_scalar('recall', recall.mean(), self.current_epoch)
         self.logger.experiment.add_scalar('f1', f1.mean(), self.current_epoch) 
+
+        self.log("hp/precision", precision.mean())
+        self.log("hp/recall", recall.mean())
+        self.log("hp/f1", f1.mean())    
         
         # plot validation results
         last_batch = valid_step_outputs[-1]
@@ -151,7 +167,7 @@ class EDPeakDector(pl.LightningModule):
 
         img = img.unsqueeze(0).to(device='cuda', dtype=torch.float)
         outputs = self.model(img)
-        outputs = non_max_suppression(outputs, conf_thres=self.args['conf_thres'], iou_thres=self.args['iou_thres'])
+        outputs = non_max_suppression(outputs, conf_thres=self.conf_thres, iou_thres=self.iou_thres)
 
         targets[:, 2:] = xywh2xyxy(targets[:, 2:])
         targets[:, 2:] *= img.size(3)
@@ -290,7 +306,7 @@ def _plot_evaluation(imgs, targets, outputs, classes):
             axs[i,j].yaxis.set_major_locator(NullLocator())
 
     fig.subplots_adjust(wspace=0.0, hspace=0.05)
-    plt.show()
+    # plt.show()
     return fig
 
 
@@ -299,7 +315,7 @@ def detect_sigle_dp(classes, img, model, targets):
 
     img = img.unsqueeze(0).to(device='cuda', dtype=torch.float)
     outputs = model(img)
-    outputs = non_max_suppression(outputs, conf_thres=model.args['conf_thres'], iou_thres=model.args['iou_thres'])
+    outputs = non_max_suppression(outputs, conf_thres=model.conf_thres, iou_thres=model.iou_thres)
 
     targets[:, 2:] = xywh2xyxy(targets[:, 2:])
     targets[:, 2:] *= img.size(3)

@@ -14,54 +14,54 @@ from .utils import to_cpu, worker_seed_set
 from .transforms import DEFAULT_TRANSFORMS
 
 
-from peakdetect.utils.dataset import DPdataset
+# fropeakdetect.utils.dp_generatoret import DPdataset
 # from sklearn.model_selection import train_test_split
 
-def create_dataset(struct_filename, 
-                    euler_angle_filename,
-                    pattern_size = 128,
-                    pattern_sigma = 1.5,
-                    reciprocal_radius = 2.0,
-                    acceleration_voltage=200.0,
-                    max_excitation_error=0.03,
-                    save_path=None):
+# def create_dataset(struct_filename, 
+#                     euler_angle_filename,
+#                     pattern_size = 128,
+#                     pattern_sigma = 1.5,
+#                     reciprocal_radius = 2.0,
+#                     acceleration_voltage=200.0,
+#                     max_excitation_error=0.03,
+#                     save_path=None):
 
-    dp_dataset = DPdataset(struct_filename,
-                            euler_angle_filename,
-                            pattern_size,
-                            pattern_sigma,
-                            reciprocal_radius,
-                            acceleration_voltage,
-                            max_excitation_error)
+#     dp_dataset = DPdataset(struct_filename,
+#                             euler_angle_filename,
+#                             pattern_size,
+#                             pattern_sigma,
+#                             reciprocal_radius,
+#                             acceleration_voltage,
+#                             max_excitation_error)
     
-    # make training set
-    dp_imgs = []
-    bb_targets=[]
-    for idx in range(len(dp_dataset)):
-        dp_image, bb_target, euler_angle, dp_info = dp_dataset.__getitem__(idx)
-        dp_image = dp_image.numpy()
-        bb_target = bb_target.numpy()
-        bb_target[:,0] = np.ones((bb_target.shape[0]))*idx
-        dp_imgs.append(dp_image)
-        bb_targets.append(bb_target)
+#     # make training set
+#     dp_imgs = []
+#     bb_targets=[]
+#     for idx in range(len(dp_dataset)):
+#         dp_image, bb_target, euler_angle, dp_info = dp_dataset.__getitem__(idx)
+#         dp_image = dp_image.numpy()
+#         bb_target = bb_target.numpy()
+#         bb_target[:,0] = np.ones((bb_target.shape[0]))*idx
+#         dp_imgs.append(dp_image)
+#         bb_targets.append(bb_target)
     
-    dp_imgs = np.stack(dp_imgs)
-    bb_targets = np.concatenate(bb_targets,axis=0)
-    bb_targets_df = pd.DataFrame(bb_targets, columns=['id','class','bx','by','bw','bh'])
+#     dp_imgs = np.stack(dp_imgs)
+#     bb_targets = np.concatenate(bb_targets,axis=0)
+#     bb_targets_df = pd.DataFrame(bb_targets, columns=['id','class','bx','by','bw','bh'])
     
-    if save_path:
-        imgs_filename = euler_angle_filename.split('.')[0] + 'dp_images.npy'
-        np.save(os.path.join((save_path, imgs_filename)),dp_imgs)
+#     if save_path:
+#         imgs_filename = euler_angle_filename.split('.')[0] + 'dp_images.npy'
+#         np.save(os.path.join((save_path, imgs_filename)),dp_imgs)
 
-        targets_filename =  euler_angle_filename.split('.')[0] + 'targets.csv'
-        bb_targets_df.to_csv(targets_filename, index=0)
+#         targets_filename =  euler_angle_filename.split('.')[0] + 'targets.csv'
+#         bb_targets_df.to_csv(targets_filename, index=0)
     
-    else:
-        return dp_imgs, bb_targets_df
+#     else:
+#         return dp_imgs, bb_targets_df
 
 
 
-class DPdataset_no_simulation(Dataset):
+class DPdataset(Dataset):
     def __init__(self, 
                  struct_filename, 
                  euler_angle_filename,

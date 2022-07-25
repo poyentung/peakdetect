@@ -1,0 +1,8 @@
+_target_: peakdetect.lightning_module.EDPeakDector.load_from_checkpoint
+checkpoint_path: 'checkpoints/orth_5_degree_Resnet/orth_5_degree_Resnet-epoch=144-precission=0.00.ckpt'
+model_config_path: peakdetect/peakdetect_Resnet.cfg
+conf_thres: 0.1
+iou_thres: 0.5
+nms_thres: 0.5
+class_names_path: simulation_data/train_valid_data/Acetaminophen_orthorhombic_5_degree_class_names.txt
+input_dp_size: 128

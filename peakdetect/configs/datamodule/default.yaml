@@ -1,0 +1,33 @@
+
+_target_: peakdetect.data_module.DPDataModule
+
+# structure
+struct_path: simulation_data/Acetaminophen_orthorhombic.cif
+
+# prepared euler_angles, dps, and targets
+all_euler_angles_path: simulation_data/anglefile_Acetaminophen_orthorhombic_5_degree.txt
+
+dp_images_path_train: simulation_data/train_valid_data/Acetaminophen_orthorhombic_5_degree_dp_images_train
+targets_path_train: simulation_data/train_valid_data/Acetaminophen_orthorhombic_5_degree_targets_train
+euler_angles_path_train: simulation_data/train_valid_data/Acetaminophen_orthorhombic_5_degree_euler_angles_train.csv
+
+dp_images_path_valid: simulation_data/train_valid_data/Acetaminophen_orthorhombic_5_degree_dp_images_train
+targets_path_valid: simulation_data/train_valid_data/Acetaminophen_orthorhombic_5_degree_targets_train
+euler_angles_path_valid: simulation_data/train_valid_data/Acetaminophen_orthorhombic_5_degree_euler_angles_val.csv
+
+# class names
+class_names_path: simulation_data/train_valid_data/Acetaminophen_orthorhombic_5_degree_class_names.txt
+#simulation_data/class_names.txt
+
+
+# pattern simulation configs
+pattern_size: 128
+pattern_sigma: 1.5
+reciprocal_radius: 0.5
+acceleration_voltage: 200.0
+max_excitation_error: 0.03
+minimum_intensity: 0.05
+
+# dataloader params
+batch_size: 64
+n_cpu: 4
